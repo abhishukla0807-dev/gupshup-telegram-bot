@@ -14,8 +14,12 @@ Write-Host "☁️ 1. Checking AWS CLI configuration..." -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
-    Write-Error "AWS CLI is not installed. Please install it from: https://aws.amazon.com/cli/"
-    exit 1
+    if (Test-Path "C:\Program Files\Amazon\AWSCLIV2\aws.exe") {
+        $env:Path += ";C:\Program Files\Amazon\AWSCLIV2"
+    } else {
+        Write-Error "AWS CLI is not installed. Please install it from: https://aws.amazon.com/cli/"
+        exit 1
+    }
 }
 
 $AwsRegion = aws configure get region
@@ -83,7 +87,7 @@ $InstanceId = aws ec2 run-instances `
     --instance-type $InstanceType `
     --key-name $KeyName `
     --security-group-ids $SgId `
-    --block-device-mappings '[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"VolumeSize\":20,\"VolumeType\":\"gp3\"}}]' `
+    --block-device-mappings DeviceName=/dev/xvda,Ebs={VolumeSize=20,VolumeType=gp3} `
     --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=gupshup-bot}]' `
     --query "Instances[0].InstanceId" --output text
 
