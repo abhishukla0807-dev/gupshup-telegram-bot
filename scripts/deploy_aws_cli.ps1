@@ -3,8 +3,6 @@
 # Creates Security Group, Key Pair, and Launches Amazon Linux 2023 t2.micro
 # ==============================================================================
 
-$ErrorActionPreference = "Stop"
-
 $KeyName = "gupshup-key"
 $SgName = "gupshup-bot-sg"
 $InstanceType = "t2.micro"
@@ -22,7 +20,7 @@ if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
     }
 }
 
-$AwsRegion = & aws configure get region
+$AwsRegion = (& aws configure get region).Trim()
 if (-not $AwsRegion) { $AwsRegion = "ap-south-1" }
 Write-Host "Using AWS Region: $AwsRegion" -ForegroundColor Green
 
@@ -30,8 +28,8 @@ Write-Host "==========================================================" -Foregro
 Write-Host "[*] 2. Checking or Creating EC2 Key Pair ($KeyName)..." -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-$KeyExists = & aws ec2 describe-key-pairs --key-names $KeyName 2>$null
-if (-not $KeyExists) {
+$KeyCheck = (& aws ec2 describe-key-pairs --query "KeyPairs[?KeyName=='$KeyName'].KeyName" --output text).Trim()
+if (-not $KeyCheck -or $KeyCheck -eq "None") {
     Write-Host "Creating new key pair: $KeyName.pem"
     $KeyMaterial = & aws ec2 create-key-pair --key-name $KeyName --query "KeyMaterial" --output text
     Set-Content -Path "$KeyName.pem" -Value $KeyMaterial -Encoding Ascii
@@ -44,13 +42,13 @@ Write-Host "==========================================================" -Foregro
 Write-Host "[*] 3. Configuring Security Group ($SgName)..." -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-$VpcId = & aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" --query "Vpcs[0].VpcId" --output text
+$VpcId = (& aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" --query "Vpcs[0].VpcId" --output text).Trim()
 
-$SgId = & aws ec2 describe-security-groups --filters "Name=group-name,Values=$SgName" --query "SecurityGroups[0].GroupId" --output text 2>$null
+$SgId = (& aws ec2 describe-security-groups --filters "Name=group-name,Values=$SgName" --query "SecurityGroups[0].GroupId" --output text).Trim()
 
 if (-not $SgId -or $SgId -eq "None") {
     Write-Host "Creating security group in VPC: $VpcId"
-    $SgId = & aws ec2 create-security-group --group-name $SgName --description "Security group for GupShup Telegram Bot (SSH only)" --vpc-id $VpcId --query "GroupId" --output text
+    $SgId = (& aws ec2 create-security-group --group-name $SgName --description "Security group for GupShup Telegram Bot (SSH only)" --vpc-id $VpcId --query "GroupId" --output text).Trim()
     Write-Host "[OK] Created security group: $SgId" -ForegroundColor Green
 } else {
     Write-Host "[INFO] Using existing security group: $SgId" -ForegroundColor Yellow
@@ -64,7 +62,7 @@ Write-Host "==========================================================" -Foregro
 Write-Host "[*] 4. Fetching latest Amazon Linux 2023 Free Tier AMI..." -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-$AmiId = & aws ssm get-parameter --name "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64" --query "Parameter.Value" --output text
+$AmiId = (& aws ssm get-parameter --name "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64" --query "Parameter.Value" --output text).Trim()
 
 Write-Host "Found AMI: $AmiId" -ForegroundColor Green
 
@@ -82,15 +80,15 @@ $runArgs = @(
     "--output", "text"
 )
 
-$InstanceId = & aws @runArgs
+$InstanceId = (& aws @runArgs).Trim()
 Write-Host "[OK] Instance launched: $InstanceId" -ForegroundColor Green
 
 & aws ec2 create-tags --resources $InstanceId --tags Key=Name,Value=gupshup-bot
 
-Write-Host "Waiting for instance to receive public IP (10-15 seconds)..." -ForegroundColor Yellow
+Write-Host "Waiting for instance to receive public IP (usually takes 10-15 seconds)..." -ForegroundColor Yellow
 & aws ec2 wait instance-running --instance-ids $InstanceId
 
-$PublicIp = & aws ec2 describe-instances --instance-ids $InstanceId --query "Reservations[0].Instances[0].PublicIpAddress" --output text
+$PublicIp = (& aws ec2 describe-instances --instance-ids $InstanceId --query "Reservations[0].Instances[0].PublicIpAddress" --output text).Trim()
 
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host "[SUCCESS] EC2 Instance is LIVE!" -ForegroundColor Green
