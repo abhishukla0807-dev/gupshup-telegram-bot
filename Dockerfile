@@ -1,40 +1,25 @@
-# ==========================================
+# ==============================================================================
 # GupShup Telegram Matchmaker Dockerfile
-# Production-ready for AWS EC2 & Containerized Deployment
-# ==========================================
+# Optimized for AWS EC2 Free Tier (Amazon Linux 2023 / Ubuntu)
+# ==============================================================================
 
-FROM python:3.11-slim-bookworm
+FROM python:3.11-slim
 
-# Python and system environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
     PYTHONPATH=/app
 
 WORKDIR /app
 
-# Copy requirements first to leverage Docker layer caching
-COPY requirements.txt /app/
+# Copy dependency specifications first for Docker layer caching
+COPY requirements.txt .
 
 # Install python dependencies
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Copy application source code
-COPY . /app/
+# Copy application code
+COPY . .
 
-# Ensure entrypoint.sh has Linux line endings (LF) and executable permissions
-RUN sed -i 's/\r$//' /app/entrypoint.sh && \
-    chmod +x /app/entrypoint.sh
-
-# Run as non-root user for production security
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
-
-USER appuser
-
-# Healthcheck to ensure container is responsive
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD python -c "import urllib.request; exit(0)" || exit 1
-
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Run entrypoint script or root bot.py (runs alembic migrations + starts bot)
+CMD ["python", "bot.py"]
