@@ -1,6 +1,6 @@
 # ==========================================
 # GupShup Telegram Matchmaker Dockerfile
-# Production-ready for Railway deployment
+# Production-ready for AWS EC2 & Containerized Deployment
 # ==========================================
 
 FROM python:3.11-slim-bookworm
