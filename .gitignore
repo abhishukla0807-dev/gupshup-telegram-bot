@@ -2,6 +2,8 @@
 .env
 .env.local
 *.env
+*.pem
+*.key
 
 # Python Virtual Environment
 venv/
