@@ -31,3 +31,6 @@ htmlcov/
 # Database data
 postgres_data/
 redis_data/
+
+# Documentation with sensitive information
+docs/RAILWAY_DEPLOYMENT_GUIDE*
